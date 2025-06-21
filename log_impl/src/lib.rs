@@ -63,17 +63,23 @@ pub fn log_macro_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
         i = i + 1;
     }
 
+    // Return the new modified function
     quote!(
         // Mutable global variables for this function?
         // static nonce counter?
         // static bool for writing program point declaration on first enter?
+
+        // Add all original function attributes
         #(#attrs)*
 
+        // Keep the same visibility and function signature
         #vis #sig {
             println!("Enter function:: {}", quote!(#signature));
+
             // log parameters
             #(#ps)*
 
+            // May need to capture by mutable reference (this is immutable reference)
             let __f = || { #(#statements)* };
 
             // Call function in a lambda

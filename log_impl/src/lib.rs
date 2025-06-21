@@ -50,7 +50,7 @@ pub fn log_macro_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
             p_name.push(c);
         }
         // Concatentate together a print statement using the parameter name p_name.
-        let print: String = String::from("println!(\"{}\", ");
+        let print: String = String::from("println!(\"{:?}\", ");
         let semicolon: String = String::from(");");
         let print_arg = format!("{print}{p_name}{semicolon}");
         let tree = syn::parse_file(&print_arg).unwrap();
@@ -66,15 +66,18 @@ pub fn log_macro_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
             // log parameters
             #(#ps)*
 
-            let __result = {
-                #(#statements)*
-            };
+            let __f = || { #(#statements)* };
+            // let __result = {
+            //     #(#statements)*
+            // };
+            let __result = __f();
 
             // log result
             // Need a way to get the return expression in a string. Fixed -- use debug specifier :? or :#?.
             //   -- it was complaining that main's void return () couldn't be formatted with default specifier.
             println!("Returns: {:?}", __result);
             println!("Exit function:: {}", quote!(#signature));
+            // println!("Returns: {:?}", #(#statements)*);
             return __result;
         }
     )

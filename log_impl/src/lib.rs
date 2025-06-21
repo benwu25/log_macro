@@ -23,7 +23,11 @@ pub fn log_macro_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
 
     // Currently: this code extracts each parameter name into a string and prints in debug mode (no type narrowing, no formatting)
 
-    // Next: for each parameter, deduce its type and handle different cases (e.g., structs, nested structs, and their fields)
+    // Note: proc_macro says not to do this string manipulation.
+    //       It advises to match with TokenTree? But TokenTree::Ident fields are private?? How can I get the identifier from a TokenTree?
+    //       This manipulation relies on whitespace and format of p, which is not ideal and not robust.
+
+    // Todo: for each parameter, deduce its type and handle different cases (e.g., structs, nested structs, and their fields)
     // What we have here is parameter names and types as strings: e.g., y: User.
     //  -- for struct types like User, how do we get its field names and types, e.g., id: i32 for User { id: i32 }
     //  -- ideas:

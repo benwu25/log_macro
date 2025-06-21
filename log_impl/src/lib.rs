@@ -4,6 +4,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{FnArg, ItemFn, parse_macro_input};
 
+// Implementation of the #[log_macro] function
 pub fn log_macro_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
     // Parse function's TokenStream
     let input = parse_macro_input!(input as ItemFn);
@@ -17,39 +18,43 @@ pub fn log_macro_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
     } = input;
 
     let statements = block.stmts.clone();
-
     let signature = sig.clone();
     let params = sig.inputs.clone();
+
+    // Currently: this code extracts each parameter name into a string and prints in debug mode (no type narrowing, no formatting)
+
+    // Next: for each parameter, deduce its type and handle different cases (e.g., structs, nested structs, and their fields)
+    // What we have here is parameter names and types as strings: e.g., y: User.
+    //  -- for struct types like User, how do we get its field names and types, e.g., id: i32 for User { id: i32 }
+    //  -- ideas:
+    //     - add a macro to each struct to implement a function which returns all the structs fields and types.
+    //       we can call this function on the struct instance to get the information we need
+    //     - use built-in functionality from Rust to call a macro or function or typeof operator to get the structs fields and types.
 
     // Build list of print statements to log each parameter
     let mut ps: Vec<proc_macro2::TokenStream> = Vec::new();
     let mut i = 0;
     while i < params.len() {
         let p: FnArg = params[i].clone();
-        // ps.push(quote! { println!("{}", quote!(#p) ); });
-        // Note: proc_macro says not to do this string manipulation.
-        //       It advises to match with TokenTree? But TokenTree::Ident fields are private?? How can I get the identifier? Ask if you're going to be useful.
-        //       This manipulation relies on whitespace and format of p, which is not ideal and not robust.
 
-        // has the form "ident : type", like "a : i32".
+        // quote!(#p) has the form "parameter_name : parameter_type"
         let s1: String = quote!(#p).to_string();
         let mut p_name: String = String::from("");
         let mut p_name_len = 0;
-        // Find last occurence of ':' in "ident : type".
+        // Find last occurence of ':' in s1
         for (j, c) in s1.chars().enumerate() {
             if c == ':' {
                 p_name_len = j;
             }
         }
-        // Push characters until last ':' character.
+        // Push identifier characters
         for (j, c) in s1.chars().enumerate() {
-            // Cut off space between identifier end and ':'.
             if j == p_name_len - 1 {
                 break;
             }
             p_name.push(c);
         }
-        // Concatentate together a print statement using the parameter name p_name.
+        // Construct a print statement to print the parameter, push to list of print statements ps
         let print: String = String::from("println!(\"{:?}\", ");
         let semicolon: String = String::from(");");
         let print_arg = format!("{print}{p_name}{semicolon}");
@@ -59,6 +64,9 @@ pub fn log_macro_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
     }
 
     quote!(
+        // Mutable global variables for this function?
+        // static nonce counter?
+        // static bool for writing program point declaration on first enter?
         #(#attrs)*
 
         #vis #sig {
@@ -67,17 +75,14 @@ pub fn log_macro_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
             #(#ps)*
 
             let __f = || { #(#statements)* };
-            // let __result = {
-            //     #(#statements)*
-            // };
+
+            // Call function in a lambda
             let __result = __f();
 
-            // log result
-            // Need a way to get the return expression in a string. Fixed -- use debug specifier :? or :#?.
-            //   -- it was complaining that main's void return () couldn't be formatted with default specifier.
+            // log result: no need to if exception occurred in lambda?
             println!("Returns: {:?}", __result);
             println!("Exit function:: {}", quote!(#signature));
-            // println!("Returns: {:?}", #(#statements)*);
+
             return __result;
         }
     )
